@@ -26,6 +26,12 @@ namespace NCL::Rendering {
 	class MeshAnimation;
 	class Texture;
 
+	enum GLTFAlphaMode {
+		Opaque,
+		Mask,
+		Cutoff
+	};
+
 	struct GLTFMaterialLayer {
 		SharedTexture albedo;
 		SharedTexture bump;
@@ -33,8 +39,15 @@ namespace NCL::Rendering {
 		SharedTexture emission;
 		SharedTexture metallic;
 
-		GLTFMaterialLayer() {
-		}
+		Vector4 albedoColour	= Vector4(1, 1, 1, 1);
+		Vector3 emissionColour	= Vector3(0, 0, 0);
+		float	metallicFactor	= 0.0f;
+		float	roughnessFactor = 1.0f;
+		float	alphaCutoff		= 0.5f;
+		bool	doubleSided		= false;
+
+		GLTFAlphaMode alphaMode = GLTFAlphaMode::Opaque;
+		std::string name = "Unnamed Material Layer";
 	};
 
 	struct GLTFMaterial {

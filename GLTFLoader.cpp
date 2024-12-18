@@ -225,7 +225,7 @@ void GLTFLoader::LoadImages(tinygltf::Model& m, GLTFScene& scene, BaseState stat
 }
 
 void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState state) {
-	scene.materialLayers.reserve(m.materials.size());
+	scene.materialLayers.reserve(scene.materialLayers.size() + m.materials.size());
 	for (const auto& m : m.materials) {
 		GLTFMaterialLayer layer;
 		layer.albedo	= m.pbrMetallicRoughness.baseColorTexture.index			>= 0 ? scene.textures[state.firstTex + m.pbrMetallicRoughness.baseColorTexture.index]		  : nullptr;
@@ -234,6 +234,35 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 		layer.bump		= m.normalTexture.index		>= 0 ? scene.textures[state.firstTex + m.normalTexture.index]	 : nullptr;
 		layer.occlusion = m.occlusionTexture.index	>= 0 ? scene.textures[state.firstTex + m.occlusionTexture.index] : nullptr;
 		layer.emission	= m.emissiveTexture.index	>= 0 ? scene.textures[state.firstTex + m.emissiveTexture.index]  : nullptr;
+
+		layer.metallicFactor	= m.pbrMetallicRoughness.metallicFactor;
+		layer.roughnessFactor	= m.pbrMetallicRoughness.roughnessFactor;
+		layer.alphaCutoff		= m.alphaCutoff;
+
+		if (!m.alphaMode.empty()) {
+			if (m.alphaMode == "MASK") {
+				layer.alphaMode = GLTFAlphaMode::Mask;
+			}
+			else if (m.alphaMode == "OPAQUE") {
+				layer.alphaMode = GLTFAlphaMode::Opaque;
+			}
+			else if (m.alphaMode == "CUTOFF") {
+				layer.alphaMode = GLTFAlphaMode::Cutoff;
+			}
+		}
+
+		if (!m.name.empty()) {
+			layer.name = m.name;
+		}
+
+		layer.doubleSided = m.doubleSided;
+
+		if (m.pbrMetallicRoughness.baseColorFactor.size() == 4) {
+			layer.albedoColour.x = m.pbrMetallicRoughness.baseColorFactor[0];
+			layer.albedoColour.y = m.pbrMetallicRoughness.baseColorFactor[1];
+			layer.albedoColour.z = m.pbrMetallicRoughness.baseColorFactor[2];
+			layer.albedoColour.w = m.pbrMetallicRoughness.baseColorFactor[3];
+		}
 		
 		scene.materialLayers.push_back(layer);
 	}
