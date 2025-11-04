@@ -12,7 +12,6 @@
 #include "../NCLCoreClasses/Matrix.h"
 
 #include "../NCLCoreClasses/Vector.h"
-#include "../NCLCoreClasses/Matrix.h"
 
 namespace tinygltf {
 	class Model;
@@ -32,7 +31,7 @@ namespace NCL::Rendering {
 		Cutoff
 	};
 
-	struct GLTFMaterialLayer {
+	struct GLTFMaterial {
 		SharedTexture albedo;
 		SharedTexture bump;
 		SharedTexture occlusion;
@@ -50,21 +49,20 @@ namespace NCL::Rendering {
 		std::string name = "Unnamed Material Layer";
 	};
 
-	struct GLTFMaterial {
-		std::vector< GLTFMaterialLayer > allLayers;
+	struct GLTFMeshMaterials {
+		std::vector< int32_t > layers;
 	};		
 
 	struct GLTFNode {
-		std::string name;
-		uint32_t nodeID = 0;
+		std::string		name;
+		uint32_t		nodeID = 0;
 
-		Mesh* mesh = nullptr;
-		GLTFMaterial* material = nullptr;
+		SharedMesh		mesh = nullptr;
 
-		Matrix4 localMatrix;
-		Matrix4 worldMatrix;
+		Matrix4			localMatrix;
+		Matrix4			worldMatrix;
 
-		int32_t parent = -1;
+		int32_t			parent = -1;
 		std::vector<int32_t> children;
 	};	
 
@@ -73,8 +71,8 @@ namespace NCL::Rendering {
 		std::vector<SharedMeshAnim>		animations;
 		std::vector<SharedTexture>		textures;
 
+		std::vector<GLTFMeshMaterials>	meshMaterials;
 		std::vector<GLTFMaterial>		materials;
-		std::vector<GLTFMaterialLayer>	materialLayers;
 
 		std::vector<GLTFNode>			sceneNodes;
 	};
@@ -119,7 +117,7 @@ namespace NCL::Rendering {
 
 		static void AssignNodeMeshes(tinygltf::Model& m, GLTFScene& scene, BaseState state);
 
-		static MeshConstructionFunction meshFunc;
-		static TextureConstructionFunction texFunc;
+		static MeshConstructionFunction		meshFunc;
+		static TextureConstructionFunction	texFunc;
 	};
 }

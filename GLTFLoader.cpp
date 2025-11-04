@@ -187,8 +187,8 @@ bool GLTFLoader::Load(const std::string& filename, GLTFScene& intoScene) {
 
 	BaseState state;
 	state.firstAnim		= intoScene.animations.size();
-	state.firstMat		= intoScene.materials.size();
-	state.firstMatLayer = intoScene.materialLayers.size();
+	state.firstMat		= intoScene.meshMaterials.size();
+	state.firstMatLayer = intoScene.materials.size();
 	state.firstMesh		= intoScene.meshes.size();
 	state.firstNode		= intoScene.sceneNodes.size();
 	state.firstTex		= intoScene.textures.size();
@@ -225,9 +225,9 @@ void GLTFLoader::LoadImages(tinygltf::Model& m, GLTFScene& scene, BaseState stat
 }
 
 void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState state) {
-	scene.materialLayers.reserve(scene.materialLayers.size() + m.materials.size());
+	scene.materials.reserve(scene.materials.size() + m.materials.size());
 	for (const auto& m : m.materials) {
-		GLTFMaterialLayer layer;
+		GLTFMaterial layer;
 		layer.albedo	= m.pbrMetallicRoughness.baseColorTexture.index			>= 0 ? scene.textures[state.firstTex + m.pbrMetallicRoughness.baseColorTexture.index]		  : nullptr;
 		layer.metallic	= m.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0 ? scene.textures[state.firstTex + m.pbrMetallicRoughness.metallicRoughnessTexture.index] : nullptr;
 			
@@ -264,7 +264,7 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 			layer.albedoColour.w = m.pbrMetallicRoughness.baseColorFactor[3];
 		}
 		
-		scene.materialLayers.push_back(layer);
+		scene.materials.push_back(layer);
 	}
 }
 
@@ -276,8 +276,8 @@ void GLTFLoader::LoadVertexData(tinygltf::Model& model, GLTFScene& scene, BaseSt
 			continue;
 		}
 
-		GLTFMaterial material;
-		material.allLayers.reserve(m.primitives.size());
+		GLTFMeshMaterials material;
+		material.layers.reserve(m.primitives.size());
 
 		size_t totalVertexCount = 0;
 
@@ -352,12 +352,7 @@ void GLTFLoader::LoadVertexData(tinygltf::Model& model, GLTFScene& scene, BaseSt
 				CopyVectorData<unsigned int, unsigned int>(vIndices, start, a, model);
 			}
 
-			GLTFMaterialLayer matLayer;
-
-			if (p.material >= 0) { //fcan ever be false?
-				matLayer = scene.materialLayers[state.firstMatLayer + p.material];
-			}
-			material.allLayers.push_back(matLayer);
+			material.layers.push_back(p.material >= 0 ? state.firstMatLayer + p.material : -1);
 
 			mesh->AddSubMesh((int)firstIndex, (int)(vIndices.size() - firstIndex), (int)baseVertex);
 		}
@@ -371,7 +366,7 @@ void GLTFLoader::LoadVertexData(tinygltf::Model& model, GLTFScene& scene, BaseSt
 		mesh->SetVertexSkinWeights(vJointWeights);
 
 		scene.meshes.push_back(mesh);
-		scene.materials.push_back(material);
+		scene.meshMaterials.push_back(material);
 	}
 }
 
@@ -381,7 +376,7 @@ void GLTFLoader::AssignNodeMeshes(tinygltf::Model& model, GLTFScene& scene, Base
 		auto& fileNode  = model.nodes[i];
 
 		if (fileNode.mesh >= 0) {
-			sceneNode.mesh = scene.meshes[state.firstMesh + fileNode.mesh].get();
+			sceneNode.mesh = scene.meshes[state.firstMesh + fileNode.mesh];
 		}
 		if (fileNode.skin >= 0) {
 			auto& skin = model.skins[fileNode.skin];
@@ -466,73 +461,65 @@ void GLTFLoader::LoadSkinningData(tinygltf::Model& model, GLTFScene& scene, int3
 	assert(sceneNode.mesh);
 	Mesh& mesh = *sceneNode.mesh;
 
-	//for (auto& skin : model.skins) {
-		GLTFSkin skinData;
+	GLTFSkin skinData;
 
-		//assert(state.firstNode + skin.skeleton < scene.sceneNodes.size());
-		//GLTFNode* rootNode = &scene.sceneNodes[state.firstNode + skin.skeleton];
+	skinData.globalTransformInverse = Matrix::Inverse(sceneNode.worldMatrix);
 
-		//assert(rootNode->mesh);
+	skinData.worldInverseBindPose.resize(skin.joints.size());
 
+	int index = skin.inverseBindMatrices;
+	if (index >= 0) {
+		Accessor& a = model.accessors[index];
 
-		skinData.globalTransformInverse = Matrix::Inverse(sceneNode.worldMatrix);
+		const auto& inBufferView = model.bufferViews[a.bufferView];
+		const auto& inBuffer = model.buffers[inBufferView.buffer];
 
-		skinData.worldInverseBindPose.resize(skin.joints.size());
+		const unsigned char* inData = inBuffer.data.data() + inBufferView.byteOffset + a.byteOffset;
+		Matrix4* matData = (Matrix4*)inData;
 
-		int index = skin.inverseBindMatrices;
-		if (index >= 0) {
-			Accessor& a = model.accessors[index];
+		size_t count = inBufferView.byteLength / sizeof(Matrix4);
 
-			const auto& inBufferView = model.bufferViews[a.bufferView];
-			const auto& inBuffer = model.buffers[inBufferView.buffer];
+		for (int i = 0; i < count; ++i) {
+			skinData.worldInverseBindPose[i] = *matData;
+			matData++;
+		}
+	}
+	else {
+		//???
+	}
 
-			const unsigned char* inData = inBuffer.data.data() + inBufferView.byteOffset + a.byteOffset;
-			Matrix4* matData = (Matrix4*)inData;
+	//Build the correct list for the parent lookup later
+	for (int i = 0; i < skin.joints.size(); ++i) {
+		auto& node = model.nodes[skin.joints[i]];
+		skinData.localJointNames.push_back(node.name);
+		skinData.sceneToLocalLookup.insert({ skin.joints[i], i });
+		skinData.localToSceneLookup.insert({i, skin.joints[i] });
+		skinData.worldBindPose.push_back(scene.sceneNodes[state.firstNode+skin.joints[i]].worldMatrix);
+	}
 
-			size_t count = inBufferView.byteLength / sizeof(Matrix4);
+	std::vector<int>	localParentList;
 
-			for (int i = 0; i < count; ++i) {
-				skinData.worldInverseBindPose[i] = *matData;
-				matData++;
-			}
+	for (int i = 0; i < skin.joints.size(); ++i) {
+		GLTFNode& node = scene.sceneNodes[state.firstNode + skin.joints[i]];
+
+		if (node.parent == -1) {
+			localParentList.push_back(-1);
 		}
 		else {
-			//???
-		}
-
-		//Build the correct list for the parent lookup later
-		for (int i = 0; i < skin.joints.size(); ++i) {
-			auto& node = model.nodes[skin.joints[i]];
-			skinData.localJointNames.push_back(node.name);
-			skinData.sceneToLocalLookup.insert({ skin.joints[i], i });
-			skinData.localToSceneLookup.insert({i, skin.joints[i] });
-			skinData.worldBindPose.push_back(scene.sceneNodes[state.firstNode+skin.joints[i]].worldMatrix);
-		}
-
-		std::vector<int>	localParentList;
-
-		for (int i = 0; i < skin.joints.size(); ++i) {
-			GLTFNode& node = scene.sceneNodes[state.firstNode + skin.joints[i]];
-
-			if (node.parent == -1) {
+			auto result = skinData.sceneToLocalLookup.find(node.parent);
+			if (result == skinData.sceneToLocalLookup.end()) {
 				localParentList.push_back(-1);
 			}
 			else {
-				auto result = skinData.sceneToLocalLookup.find(node.parent);
-				if (result == skinData.sceneToLocalLookup.end()) {
-					localParentList.push_back(-1);
-				}
-				else {
-					localParentList.push_back(result->second);
-				}
+				localParentList.push_back(result->second);
 			}
 		}
-		mesh.SetJointNames(skinData.localJointNames);
-		mesh.SetJointParents(localParentList);
-		mesh.SetBindPose(skinData.worldBindPose);
-		mesh.SetInverseBindPose(skinData.worldInverseBindPose);
-		LoadAnimationData(model, scene, state, mesh, skinData);
-	//}
+	}
+	mesh.SetJointNames(skinData.localJointNames);
+	mesh.SetJointParents(localParentList);
+	mesh.SetBindPose(skinData.worldBindPose);
+	mesh.SetInverseBindPose(skinData.worldInverseBindPose);
+	LoadAnimationData(model, scene, state, mesh, skinData);
 }
 
 void GLTFLoader::LoadAnimationData(tinygltf::Model& model, GLTFScene& scene, BaseState state, Mesh& mesh, GLTFSkin& skinData) {
