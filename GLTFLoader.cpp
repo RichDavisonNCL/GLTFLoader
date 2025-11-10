@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <cmath>
 #include <stack>
+#include <unordered_set>
 
 using namespace tinygltf;
 using namespace NCL;
@@ -107,7 +108,7 @@ void CopyVectorData(std::vector<vecType>& vec, size_t destStart, const Accessor&
 
 void GetInterpolationData(float forTime, int& indexA, int& indexB, float& t, const Accessor& accessor, const Model& model) {
 	const auto& inBufferView = model.bufferViews[accessor.bufferView];
-	const auto& inBuffer	 = model.buffers[inBufferView.buffer];
+	const auto& inBuffer = model.buffers[inBufferView.buffer];
 
 	const unsigned char* inData = inBuffer.data.data() + inBufferView.byteOffset + accessor.byteOffset;
 	int stride = accessor.ByteStride(inBufferView);
@@ -186,12 +187,12 @@ bool GLTFLoader::Load(const std::string& filename, GLTFScene& intoScene) {
 	}
 
 	BaseState state;
-	state.firstAnim		= intoScene.animations.size();
-	state.firstMat		= intoScene.meshMaterials.size();
+	state.firstAnim = intoScene.animations.size();
+	state.firstMat = intoScene.meshMaterials.size();
 	state.firstMatLayer = intoScene.materials.size();
-	state.firstMesh		= intoScene.meshes.size();
-	state.firstNode		= intoScene.sceneNodes.size();
-	state.firstTex		= intoScene.textures.size();
+	state.firstMesh = intoScene.meshes.size();
+	state.firstNode = intoScene.sceneNodes.size();
+	state.firstTex = intoScene.textures.size();
 
 	LoadImages(model, intoScene, state, filename, texFunc);
 	LoadMaterials(model, intoScene, state);
@@ -201,6 +202,12 @@ bool GLTFLoader::Load(const std::string& filename, GLTFScene& intoScene) {
 	AssignNodeMeshes(model, intoScene, state);
 
 	//LoadSkinningData(model, intoScene, state);
+
+	for (int i = 0; i < intoScene.sceneNodes.size(); ++i) {
+		if (intoScene.sceneNodes[i].parent < 0){
+			intoScene.topLevelNodes.push_back(i);
+		}
+	}
 
 	return true;
 }
@@ -520,6 +527,139 @@ void GLTFLoader::LoadSkinningData(tinygltf::Model& model, GLTFScene& scene, int3
 	mesh.SetBindPose(skinData.worldBindPose);
 	mesh.SetInverseBindPose(skinData.worldInverseBindPose);
 	LoadAnimationData(model, scene, state, mesh, skinData);
+}
+
+void GLTFLoader::LoadSceneAnimationData(tinygltf::Model& model, GLTFScene& scene, BaseState state) {
+	//std::map<int
+	for (const auto& anim : model.animations) {
+
+		std::unordered_set<int> nodesInAnim;
+
+		for (const auto& channel : anim.channels) {
+			nodesInAnim.insert(channel.target_node);
+		}
+
+		size_t jointCount = nodesInAnim.size();
+
+		float animLength = 0.0f;
+		for (int i = 0; i < anim.samplers.size(); ++i) {
+			int timeSrc = anim.samplers[i].input;
+			animLength = std::max(animLength, (float)(model.accessors[timeSrc].maxValues[0]));		
+		}
+
+		float time = 0.0f;
+		float frameRate = 30.0f;
+		float frameTime = 1.0f / frameRate;
+		unsigned int frameCount = 0;
+
+		std::vector<Matrix4> localMatrices;
+		localMatrices.reserve(jointCount * (animLength * frameRate));
+
+		std::vector<Matrix4> worldMatrices;
+		worldMatrices.reserve(jointCount * (animLength * frameRate));
+
+		//std::vector<int> inAnim(jointCount, 0); //TODO: reduce to only nodes that matter
+
+		static int TRANSLATION_BIT	= 1;
+		static int ROTATION_BIT		= 2;
+		static int SCALE_BIT		= 4;
+
+		while (time <= animLength) {
+			localMatrices.reserve((frameCount + 1) * jointCount);
+			worldMatrices.reserve((frameCount + 1) * jointCount);
+
+			std::map<int, Vector3> frameJointTranslations;
+			std::map<int, Vector3> frameJointScales;
+			std::map<int, Quaternion> frameJointRotations;
+
+			//std::fill(inAnim.begin(), inAnim.end(), 0);
+
+			for (const auto& channel : anim.channels) {
+				const auto& sampler = anim.samplers[channel.sampler];
+				const auto& input	= model.accessors[sampler.input];
+				const auto& output	= model.accessors[sampler.output];
+
+				int indexA = 0;
+				int indexB = 0;
+				float t = 0.0f;
+				GetInterpolationData(time, indexA, indexB, t, input, model);
+
+				//int localNodeID = skinData.sceneToLocalLookup[channel.target_node];
+
+				//if (channel.target_path == "translation") {
+				//	frameJointTranslations.insert({ localNodeID, GetInterpolatedVector<Vector3>(t, indexA, indexB, output, model) });
+				//	inAnim[localNodeID] |= TRANSLATION_BIT;
+				//}
+				//else if (channel.target_path == "rotation") {
+				//	Quaternion q = GetSlerpQuaterion(t, indexA, indexB, output, model);
+				//	frameJointRotations.insert({ localNodeID, q });
+				//	inAnim[localNodeID] |= ROTATION_BIT;
+				//}
+				//else if (channel.target_path == "scale") {
+				//	frameJointScales.insert({ localNodeID, GetInterpolatedVector<Vector3>(t, indexA, indexB, output, model) });
+				//	inAnim[localNodeID] |= SCALE_BIT;
+				//}
+			}
+
+			//int startMatrix = localMatrices.size();
+
+			////We'll assume that nodes aren't animated by default
+			//for (int i = 0; i < mesh.GetJointCount(); ++i) {
+			//	int localNodeID = i;
+			//	int sceneNodeID = skinData.localToSceneLookup[localNodeID];
+			//	GLTFNode& node = scene.sceneNodes[state.firstNode + sceneNodeID];
+			//	localMatrices.push_back(node.worldMatrix);
+			//	worldMatrices.push_back(node.worldMatrix);
+			//}
+
+			//for (int i = 0; i < mesh.GetJointCount(); ++i) {
+			//	int localNodeID = i;
+			//	int in = inAnim[localNodeID];
+
+			//	if (in > 0) { //This node has a modifier of some sort
+			//		int sceneNodeID = skinData.localToSceneLookup[localNodeID];
+
+			//		GLTFNode& node = scene.sceneNodes[state.firstNode + sceneNodeID];
+
+			//		Vector3 translation;
+			//		Vector3 scale(1, 1, 1);
+			//		Quaternion rotation;
+
+			//		if (in & TRANSLATION_BIT) {
+			//			translation = frameJointTranslations[localNodeID];
+			//		}
+			//		if (in & ROTATION_BIT) {
+			//			rotation = frameJointRotations[localNodeID];
+			//		}
+			//		if (in & SCALE_BIT) {
+			//			scale = frameJointScales[localNodeID];
+			//		}
+			//		Matrix4 transform = Matrix::Translation(translation) *
+			//			Quaternion::RotationMatrix<Matrix4>(rotation) *
+			//			Matrix::Scale(scale);
+
+			//		localMatrices[startMatrix + i] = transform;
+
+			//		if (node.parent) {//It's a local transform!
+			//			//We need to work out this frame's matrix for the parent node - may have been animated
+			//			GLTFNode* parent = &scene.sceneNodes[node.parent];
+			//			int localParentID = skinData.sceneToLocalLookup[parent->nodeID];
+			//			transform = worldMatrices[startMatrix + localParentID] * transform;
+			//		}
+
+			//		worldMatrices[startMatrix + i] = transform;
+			//	}
+			//}
+			time += frameTime;
+			frameCount++;
+		}
+
+		//for (int i = 0; i < worldMatrices.size(); ++i) {
+		//	worldMatrices[i] = skinData.globalTransformInverse * worldMatrices[i];
+		//}
+
+		//scene.animations.push_back(std::make_unique<MeshAnimation>((unsigned int)jointCount, frameCount, frameRate, worldMatrices));
+	}
 }
 
 void GLTFLoader::LoadAnimationData(tinygltf::Model& model, GLTFScene& scene, BaseState state, Mesh& mesh, GLTFSkin& skinData) {

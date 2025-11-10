@@ -66,6 +66,15 @@ namespace NCL::Rendering {
 		std::vector<int32_t> children;
 	};	
 
+	struct GLTFSkin {
+		std::vector<std::string>	localJointNames;
+		std::map<int, int>			sceneToLocalLookup;
+		std::map<int, int>			localToSceneLookup;
+		std::vector<Maths::Matrix4>	worldBindPose;
+		std::vector<Maths::Matrix4> worldInverseBindPose;
+		Maths::Matrix4				globalTransformInverse;
+	};
+
 	struct GLTFScene {
 		std::vector<SharedMesh>			meshes;		
 		std::vector<SharedMeshAnim>		animations;
@@ -74,7 +83,11 @@ namespace NCL::Rendering {
 		std::vector<GLTFMeshMaterials>	meshMaterials;
 		std::vector<GLTFMaterial>		materials;
 
+		std::map<int, GLTFSkin >		skinningData;
+
 		std::vector<GLTFNode>			sceneNodes;
+
+		std::vector<int32_t>			topLevelNodes;
 	};
 
 	class GLTFLoader	{
@@ -89,15 +102,6 @@ namespace NCL::Rendering {
 	protected:		
 		GLTFLoader()  = delete;
 		~GLTFLoader() = delete;
-
-		struct GLTFSkin {
-			std::vector<std::string>	localJointNames;
-			std::map<int, int>			sceneToLocalLookup;
-			std::map<int, int>			localToSceneLookup;
-			std::vector<Maths::Matrix4>	worldBindPose;
-			std::vector<Maths::Matrix4> worldInverseBindPose;
-			Maths::Matrix4				globalTransformInverse;
-		};
 
 		struct BaseState {
 			uint32_t firstNode;
@@ -114,6 +118,9 @@ namespace NCL::Rendering {
 		static void LoadVertexData(tinygltf::Model& m, GLTFScene& scene, BaseState state, GLTFLoader::MeshConstructionFunction meshConstructor);
 		static void LoadSkinningData(tinygltf::Model& model, GLTFScene& scene, int32_t nodeID, int32_t skinID, BaseState state);
 		static void LoadAnimationData(tinygltf::Model& m, GLTFScene& scene, BaseState state, Mesh& mesh, GLTFSkin& skin);
+
+		static void LoadSceneAnimationData(tinygltf::Model& m, GLTFScene& scene, BaseState state);
+
 
 		static void AssignNodeMeshes(tinygltf::Model& m, GLTFScene& scene, BaseState state);
 
