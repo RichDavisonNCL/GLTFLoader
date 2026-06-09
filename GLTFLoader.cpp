@@ -32,7 +32,7 @@ using NCL::Rendering::Texture;
 GLTFLoader::MeshConstructionFunction	GLTFLoader::meshFunc = nullptr;
 GLTFLoader::TextureConstructionFunction GLTFLoader::texFunc  = nullptr;
 
-const std::string GLTFAttributeTags[] = {
+const std::string GLTFAttributeTags[]{
 	"POSITION",
 	"COLOR",
 	"TEXCOORD_0",
@@ -288,7 +288,7 @@ void GLTFLoader::LoadVertexData(tinygltf::Model& model, GLTFScene& scene, BaseSt
 
 		size_t totalVertexCount = 0;
 
-		bool hasAttribute[VertexAttribute::MAX_ATTRIBUTES] = { false };
+		bool hasAttribute[VertexAttribute::MAX_ATTRIBUTES]{ false };
 
 		for (const auto& p : m.primitives) {
 			for (int i = 0; i < VertexAttribute::MAX_ATTRIBUTES; ++i) {
@@ -417,11 +417,11 @@ void GLTFLoader::LoadSceneNodeData(tinygltf::Model& m, GLTFScene& scene, BaseSta
 			Matrix4 scale;
 
 			if (!fileNode.scale.empty()) {
-				Vector3 s = { (float)fileNode.scale[0], (float)fileNode.scale[1], (float)fileNode.scale[2] };
+				Vector3 s{ (float)fileNode.scale[0], (float)fileNode.scale[1], (float)fileNode.scale[2] };
 				scale = Matrix::Scale(s);
 			}
 			if (!fileNode.translation.empty()) {
-				Vector3 t = { (float)fileNode.translation[0], (float)fileNode.translation[1], (float)fileNode.translation[2] };
+				Vector3 t{ (float)fileNode.translation[0], (float)fileNode.translation[1], (float)fileNode.translation[2] };
 				translation = Matrix::Translation(t);
 			}
 			if (!fileNode.rotation.empty()) {
