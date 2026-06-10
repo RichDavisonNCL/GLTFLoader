@@ -119,7 +119,7 @@ namespace NCL::Rendering {
 		static void LoadSkinningData(tinygltf::Model& model, GLTFScene& scene, int32_t nodeID, int32_t skinID, BaseState state);
 		static void LoadAnimationData(tinygltf::Model& m, GLTFScene& scene, BaseState state, Mesh& mesh, GLTFSkin& skin);
 
-		static void LoadSceneAnimationData(tinygltf::Model& m, GLTFScene& scene, BaseState state);
+		//static void LoadSceneAnimationData(tinygltf::Model& m, GLTFScene& scene, BaseState state);
 
 
 		static void AssignNodeMeshes(tinygltf::Model& m, GLTFScene& scene, BaseState state);
