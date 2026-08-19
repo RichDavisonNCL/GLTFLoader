@@ -25,32 +25,32 @@ namespace NCL::Rendering {
 	class MeshAnimation;
 	class Texture;
 
-	enum GLTFAlphaMode {
+	enum class GLTFAlphaMode : uint32_t {
 		Opaque,
 		Mask,
 		Cutoff
 	};
 
 	struct GLTFMaterial {
-		SharedTexture albedo;
-		SharedTexture bump;
-		SharedTexture occlusion;
-		SharedTexture emission;
-		SharedTexture metallic;
+		int32_t albedo;
+		int32_t bump;
+		int32_t occlusion;
+		int32_t emission;
+		int32_t metallic;
 
 		Vector4 albedoColour	= Vector4(1, 1, 1, 1);
+
 		Vector3 emissionColour	= Vector3(0, 0, 0);
 		float	metallicFactor	= 0.0f;
+
 		float	roughnessFactor = 1.0f;
 		float	alphaCutoff		= 0.5f;
-		bool	doubleSided		= false;
-
 		GLTFAlphaMode alphaMode = GLTFAlphaMode::Opaque;
-		std::string name = "Unnamed Material Layer";
+		bool	doubleSided		= false;
 	};
 
 	struct GLTFMeshMaterials {
-		std::vector< int32_t > layers;
+		std::vector< int32_t > layers; //1 material per submesh / layer of the mesh
 	};		
 
 	struct GLTFNode {
@@ -82,6 +82,7 @@ namespace NCL::Rendering {
 
 		std::vector<GLTFMeshMaterials>	meshMaterials;
 		std::vector<GLTFMaterial>		materials;
+		std::vector<std::string>		materialNames;
 
 		std::map<int, GLTFSkin >		skinningData;
 
@@ -118,9 +119,6 @@ namespace NCL::Rendering {
 		static void LoadVertexData(tinygltf::Model& m, GLTFScene& scene, BaseState state, GLTFLoader::MeshConstructionFunction meshConstructor);
 		static void LoadSkinningData(tinygltf::Model& model, GLTFScene& scene, int32_t nodeID, int32_t skinID, BaseState state);
 		static void LoadAnimationData(tinygltf::Model& m, GLTFScene& scene, BaseState state, Mesh& mesh, GLTFSkin& skin);
-
-		//static void LoadSceneAnimationData(tinygltf::Model& m, GLTFScene& scene, BaseState state);
-
 
 		static void AssignNodeMeshes(tinygltf::Model& m, GLTFScene& scene, BaseState state);
 

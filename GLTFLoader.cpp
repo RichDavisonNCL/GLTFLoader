@@ -233,12 +233,12 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 	scene.materials.reserve(scene.materials.size() + m.materials.size());
 	for (const auto& m : m.materials) {
 		GLTFMaterial layer;
-		layer.albedo	= m.pbrMetallicRoughness.baseColorTexture.index			>= 0 ? scene.textures[state.firstTex + m.pbrMetallicRoughness.baseColorTexture.index]		  : nullptr;
-		layer.metallic	= m.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0 ? scene.textures[state.firstTex + m.pbrMetallicRoughness.metallicRoughnessTexture.index] : nullptr;
+		layer.albedo	= m.pbrMetallicRoughness.baseColorTexture.index			>= 0 ? state.firstTex + m.pbrMetallicRoughness.baseColorTexture.index		  : -1;
+		layer.metallic	= m.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0 ? state.firstTex + m.pbrMetallicRoughness.metallicRoughnessTexture.index : -1;
 			
-		layer.bump		= m.normalTexture.index		>= 0 ? scene.textures[state.firstTex + m.normalTexture.index]	 : nullptr;
-		layer.occlusion = m.occlusionTexture.index	>= 0 ? scene.textures[state.firstTex + m.occlusionTexture.index] : nullptr;
-		layer.emission	= m.emissiveTexture.index	>= 0 ? scene.textures[state.firstTex + m.emissiveTexture.index]  : nullptr;
+		layer.bump		= m.normalTexture.index		>= 0 ? state.firstTex + m.normalTexture.index	 : -1;
+		layer.occlusion = m.occlusionTexture.index	>= 0 ? state.firstTex + m.occlusionTexture.index : -1;
+		layer.emission	= m.emissiveTexture.index	>= 0 ? state.firstTex + m.emissiveTexture.index  : -1;
 
 		layer.metallicFactor	= m.pbrMetallicRoughness.metallicFactor;
 		layer.roughnessFactor	= m.pbrMetallicRoughness.roughnessFactor;
@@ -256,10 +256,6 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 			}
 		}
 
-		if (!m.name.empty()) {
-			layer.name = m.name;
-		}
-
 		layer.doubleSided = m.doubleSided;
 
 		if (m.pbrMetallicRoughness.baseColorFactor.size() == 4) {
@@ -270,6 +266,7 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 		}
 		
 		scene.materials.push_back(layer);
+		scene.materialNames.push_back(!m.name.empty() ? m.name : "unnamed layer");
 	}
 }
 
