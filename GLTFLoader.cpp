@@ -378,7 +378,7 @@ void GLTFLoader::AssignNodeMeshes(tinygltf::Model& model, GLTFScene& scene, Base
 		auto& fileNode  = model.nodes[i];
 
 		if (fileNode.mesh >= 0) {
-			sceneNode.mesh = scene.meshes[state.firstMesh + fileNode.mesh];
+			sceneNode.meshID = state.firstMesh + fileNode.mesh;
 		}
 		if (fileNode.skin >= 0) {
 			auto& skin = model.skins[fileNode.skin];
@@ -460,8 +460,8 @@ void GLTFLoader::LoadSkinningData(tinygltf::Model& model, GLTFScene& scene, int3
 	auto& skin		= model.skins[skinID];
 	auto& sceneNode = scene.sceneNodes[state.firstNode + meshNode];
 
-	assert(sceneNode.mesh);
-	Mesh& mesh = *sceneNode.mesh;
+	//assert(sceneNode.mesh);
+	SharedMesh& mesh = scene.meshes[sceneNode.meshID];
 
 	GLTFSkin skinData;
 
@@ -517,11 +517,11 @@ void GLTFLoader::LoadSkinningData(tinygltf::Model& model, GLTFScene& scene, int3
 			}
 		}
 	}
-	mesh.SetJointNames(skinData.localJointNames);
-	mesh.SetJointParents(localParentList);
-	mesh.SetBindPose(skinData.worldBindPose);
-	mesh.SetInverseBindPose(skinData.worldInverseBindPose);
-	LoadAnimationData(model, scene, state, mesh, skinData);
+	(*mesh).SetJointNames(skinData.localJointNames);
+	(*mesh).SetJointParents(localParentList);
+	(*mesh).SetBindPose(skinData.worldBindPose);
+	(*mesh).SetInverseBindPose(skinData.worldInverseBindPose);
+	LoadAnimationData(model, scene, state, *mesh, skinData);
 }
 
 void GLTFLoader::LoadAnimationData(tinygltf::Model& model, GLTFScene& scene, BaseState state, Mesh& mesh, GLTFSkin& skinData) {

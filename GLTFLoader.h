@@ -57,7 +57,7 @@ namespace NCL::Rendering {
 		std::string		name;
 		uint32_t		nodeID = 0;
 
-		SharedMesh		mesh = nullptr;
+		int32_t			meshID = -1; //not all nodes have meshes...
 
 		Matrix4			localMatrix;
 		Matrix4			worldMatrix;
