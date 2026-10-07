@@ -264,6 +264,12 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 			layer.albedoColour.z = m.pbrMetallicRoughness.baseColorFactor[2];
 			layer.albedoColour.w = m.pbrMetallicRoughness.baseColorFactor[3];
 		}
+
+		if (m.emissiveFactor.size() == 3) {
+			layer.emissionColour.x = m.emissiveFactor[0];
+			layer.emissionColour.y = m.emissiveFactor[1];
+			layer.emissionColour.z = m.emissiveFactor[2];
+		}
 		
 		scene.materials.push_back(layer);
 		scene.materialNames.push_back(!m.name.empty() ? m.name : "unnamed layer");
