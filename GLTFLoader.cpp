@@ -270,6 +270,14 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 			layer.emissionColour.y = m.emissiveFactor[1];
 			layer.emissionColour.z = m.emissiveFactor[2];
 		}
+
+		auto emissiveStrength = m.extensions.find("KHR_materials_emissive_strength");
+		if (emissiveStrength != m.extensions.end() && emissiveStrength->second.Has("emissiveStrength")) {
+			float strength = (float)emissiveStrength->second.Get("emissiveStrength").GetNumberAsDouble();
+			layer.emissionColour.x *= strength;
+			layer.emissionColour.y *= strength;
+			layer.emissionColour.z *= strength;
+		}
 		
 		scene.materials.push_back(layer);
 		scene.materialNames.push_back(!m.name.empty() ? m.name : "unnamed layer");
