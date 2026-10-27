@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <span>
 #include <map>
 #include <string>
 #include <functional>

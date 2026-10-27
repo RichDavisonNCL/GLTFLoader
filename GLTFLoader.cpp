@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <cmath>
 #include <stack>
+#include <span>
 #include <unordered_set>
 
 using namespace tinygltf;
