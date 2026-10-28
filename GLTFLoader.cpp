@@ -12,7 +12,6 @@
 #include "../NCLCoreClasses/Vector.h"
 #include "../NCLCoreClasses/Maths.h"
 
-#include "../NCLCoreClasses/TextureLoader.h"
 #include "../NCLCoreClasses/Texture.h"
 
 #include "../NCLCoreClasses/MeshAnimation.h"
@@ -21,8 +20,6 @@
 #include <filesystem>
 #include <cmath>
 #include <stack>
-#include <span>
-#include <unordered_set>
 
 using namespace tinygltf;
 using namespace NCL;

@@ -1,10 +1,8 @@
 #pragma once
 #include <vector>
-#include <span>
 #include <map>
 #include <string>
 #include <functional>
-#include <iostream>
 
 #include "../NCLCoreClasses/Assets.h"
 #include "../NCLCoreClasses/Mesh.h"
