@@ -249,8 +249,8 @@ void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState s
 			else if (m.alphaMode == "OPAQUE") {
 				layer.alphaMode = GLTFAlphaMode::Opaque;
 			}
-			else if (m.alphaMode == "CUTOFF") {
-				layer.alphaMode = GLTFAlphaMode::Cutoff;
+			else if (m.alphaMode == "BLEND") {
+				layer.alphaMode = GLTFAlphaMode::Blend;
 			}
 		}
 

@@ -27,7 +27,7 @@ namespace NCL::Rendering {
 	enum class GLTFAlphaMode : uint32_t {
 		Opaque,
 		Mask,
-		Cutoff
+		Blend
 	};
 
 	struct GLTFMaterial {
