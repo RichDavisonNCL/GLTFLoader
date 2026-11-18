@@ -227,16 +227,25 @@ void GLTFLoader::LoadImages(tinygltf::Model& m, GLTFScene& scene, BaseState stat
 	}
 }
 
-void GLTFLoader::LoadMaterials(tinygltf::Model& m, GLTFScene& scene, BaseState state) {
-	scene.materials.reserve(scene.materials.size() + m.materials.size());
-	for (const auto& m : m.materials) {
+void GLTFLoader::LoadMaterials(tinygltf::Model& model, GLTFScene& scene, BaseState state) {
+	scene.materials.reserve(scene.materials.size() + model.materials.size());
+
+	auto TexFetch = [&](int32_t index) ->int32_t {
+		if (index < 0) {
+			return -1;
+		}
+		int source = model.textures[index].source;
+		return state.firstTex + source;
+	};
+
+	for (const auto& m : model.materials) {
 		GLTFMaterial layer;
-		layer.albedo	= m.pbrMetallicRoughness.baseColorTexture.index			>= 0 ? state.firstTex + m.pbrMetallicRoughness.baseColorTexture.index		  : -1;
-		layer.metallic	= m.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0 ? state.firstTex + m.pbrMetallicRoughness.metallicRoughnessTexture.index : -1;
-			
-		layer.bump		= m.normalTexture.index		>= 0 ? state.firstTex + m.normalTexture.index	 : -1;
-		layer.occlusion = m.occlusionTexture.index	>= 0 ? state.firstTex + m.occlusionTexture.index : -1;
-		layer.emission	= m.emissiveTexture.index	>= 0 ? state.firstTex + m.emissiveTexture.index  : -1;
+		layer.albedo	= TexFetch(m.pbrMetallicRoughness.baseColorTexture.index);
+		layer.metallic	= TexFetch(m.pbrMetallicRoughness.metallicRoughnessTexture.index);
+
+		layer.bump		= TexFetch(m.normalTexture.index);;
+		layer.occlusion = TexFetch(m.occlusionTexture.index);
+		layer.emission	= TexFetch(m.emissiveTexture.index);
 
 		layer.metallicFactor	= m.pbrMetallicRoughness.metallicFactor;
 		layer.roughnessFactor	= m.pbrMetallicRoughness.roughnessFactor;
